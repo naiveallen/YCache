@@ -1,10 +1,10 @@
 package node;
 
+import com.alipay.remoting.exception.RemotingException;
 import enums.NodeState;
 import raft.Consensus;
 import raft.StateMachine;
-import rpc.RPCClient;
-import rpc.RPCServer;
+import rpc.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -117,7 +117,7 @@ public class Node {
         this.cluster = new Cluster(myself, others, null);
 
         // Set RPCServer
-        this.rpcServer = new RPCServer();
+        this.rpcServer = new RPCServer(port);
 
         // Set RPCClient
         this.rpcClient = new RPCClient();
@@ -139,12 +139,51 @@ public class Node {
         rpcServer.start();
         rpcClient.start();
 
+//        try {
+//            String res = (String) rpcClient.getRpcClient().invokeSync("localhost:8881", "hello", 2000);
+//            System.out.println("reply: " + res);
+//        } catch (RemotingException | InterruptedException e) {
+//            e.printStackTrace();
+//        }
+
+
+
         // start heartbreak
         // ............
 
         System.out.println(cluster.getMyself() + " start...");
 
     }
+
+
+    // handle RequestVote RPC
+    public RequestVoteResult handleRequestVote(RequestVoteArguments arguments) {
+        return consensus.requestVote(arguments);
+    }
+
+
+    // handle AppendEntries RPC
+    public AppendEntriesResult handleAppendEntries(AppendEntriesArguments arguments) {
+        return consensus.appendEntries(arguments);
+    }
+
+
+    // test
+//    public String hello(String str) {
+//        System.out.println("receive: " + str);
+//        return str + "......................";
+//    }
+
+
+
+
+
+
+
+
+
+
+
 
 
 }
