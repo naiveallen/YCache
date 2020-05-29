@@ -1,6 +1,8 @@
 package rpc;
 
-public class AppendEntriesResult {
+import java.io.Serializable;
+
+public class AppendEntriesResult implements Serializable {
 
     // currentTerm, for leader to update itself
     private int term;

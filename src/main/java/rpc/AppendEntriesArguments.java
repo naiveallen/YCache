@@ -2,7 +2,9 @@ package rpc;
 
 import pojo.LogEntry;
 
-public class AppendEntriesArguments {
+import java.io.Serializable;
+
+public class AppendEntriesArguments implements Serializable {
 
     // leader’s term
     private int term;
@@ -26,6 +28,13 @@ public class AppendEntriesArguments {
     public AppendEntriesArguments() {
     }
 
+    // Heartbeat
+    public AppendEntriesArguments(int term, String leaderId) {
+        this.term = term;
+        this.leaderId = leaderId;
+    }
+
+    // Append Entries
     public AppendEntriesArguments(int term, String leaderId, int prevLogIndex, int prevLogTerm, LogEntry[] entries, int leaderCommit) {
         this.term = term;
         this.leaderId = leaderId;

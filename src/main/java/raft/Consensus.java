@@ -23,7 +23,7 @@ public class Consensus {
 
 
     public AppendEntriesResult appendEntries(AppendEntriesArguments arguments) {
-        return null;
+        return new AppendEntriesResult(0, true);
     }
 
 

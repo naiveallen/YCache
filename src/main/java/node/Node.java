@@ -1,13 +1,15 @@
 package node;
 
-import com.alipay.remoting.exception.RemotingException;
 import enums.NodeState;
-import raft.Consensus;
-import raft.StateMachine;
+import raft.*;
 import rpc.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Node's initial state is Follower.
@@ -92,8 +94,31 @@ public class Node {
 //    /** 心跳间隔基数 */
 //    public final long heartBeatTick = 5 * 1000;
 
+//    /**
+//     * 上一次选举超时过去的时间
+//     */
+//    private int electionElapsed;
+//
+//    /**
+//     * 收到上一次心跳过去的时间
+//     */
+//    private int heartbeatElapsed;
+//
+//
+//    private int electionTimeout;
+//
+//    private int heartbeatTimeout;
+//
+//    /**
+//     * 是一个在[electiontimeout, 2 * electiontimeout - 1]的随机值
+//     */
+//    private int randomizedElectionTimeout;
 
-//    private HeartBeatTask heartBeatTask = new HeartBeatTask();
+
+
+    private ScheduledExecutorService scheduledExecutorService;
+
+    private HeartBeatTask heartBeatTask;
 //    private ElectionTask electionTask = new ElectionTask();
 //    private ReplicationFailQueueConsumer replicationFailQueueConsumer = new ReplicationFailQueueConsumer();
 //
@@ -122,6 +147,12 @@ public class Node {
         // Set RPCClient
         this.rpcClient = new RPCClient();
 
+        scheduledExecutorService = new ScheduledThreadPoolExecutor(Runtime.getRuntime().availableProcessors());
+
+        this.heartBeatTask = new HeartBeatTask();
+
+
+
         // Set StateMachine
         this.stateMachine = StateMachine.getInstance();
 
@@ -147,9 +178,15 @@ public class Node {
 //        }
 
 
-
         // start heartbreak
-        // ............
+        // Once this node become leader, it will send heartbeat to other peers immediately
+        scheduledExecutorService.scheduleWithFixedDelay(heartBeatTask, 0, 1000, TimeUnit.MILLISECONDS);
+
+
+
+
+
+
 
         System.out.println(cluster.getMyself() + " start...");
 
@@ -175,6 +212,23 @@ public class Node {
 //    }
 
 
+    public void becomeFollower(int term, String leaderId) {
+        currentTerm = term;
+        votedFor = "";
+        state = NodeState.FOLLOWER.code;
+    }
+
+    public void becomeCandidate(int term) {
+        currentTerm = term;
+        votedFor = "";
+        state = NodeState.CANDIDATE.code;
+    }
+
+    public void becomeLeader(int term) {
+        currentTerm = term;
+        votedFor = "";
+        state = NodeState.LEADER.code;
+    }
 
 
 
@@ -186,4 +240,53 @@ public class Node {
 
 
 
+
+
+
+
+
+
+    public boolean isInitialized() {
+        return initialized;
+    }
+
+    public int getState() {
+        return state;
+    }
+
+    public Cluster getCluster() {
+        return cluster;
+    }
+
+    public int getCurrentTerm() {
+        return currentTerm;
+    }
+
+    public String getVotedFor() {
+        return votedFor;
+    }
+
+    public int getCommitIndex() {
+        return commitIndex;
+    }
+
+    public int getLastApplied() {
+        return lastApplied;
+    }
+
+    public RPCServer getRpcServer() {
+        return rpcServer;
+    }
+
+    public RPCClient getRpcClient() {
+        return rpcClient;
+    }
+
+    public StateMachine getStateMachine() {
+        return stateMachine;
+    }
+
+    public Consensus getConsensus() {
+        return consensus;
+    }
 }

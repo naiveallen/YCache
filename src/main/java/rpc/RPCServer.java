@@ -14,24 +14,7 @@ public class RPCServer {
         rpcServer = new RpcServer(port,false, false);
         rpcServer.registerUserProcessor(new RequestVoteUserProcessor());
         rpcServer.registerUserProcessor(new AppendEntriesUserProcessor());
-        rpcServer.registerUserProcessor(new AbstractUserProcessor<String>(
 
-        ) {
-            @Override
-            public void handleRequest(BizContext bizContext, AsyncContext asyncContext, String s) {
-
-            }
-
-            @Override
-            public Object handleRequest(BizContext bizContext, String s) throws Exception {
-                return Node.getInstance().hello(s);
-            }
-
-            @Override
-            public String interest() {
-                return String.class.getName();
-            }
-        });
     }
 
     public RpcServer getRpcServer() {
