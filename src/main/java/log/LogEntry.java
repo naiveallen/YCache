@@ -1,4 +1,4 @@
-package pojo;
+package log;
 
 public class LogEntry {
 

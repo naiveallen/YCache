@@ -23,9 +23,13 @@ public class HeartBeatTask implements Runnable{
 
             List<String> peers = node.getCluster().getOthers();
 
+            long currentTime = System.currentTimeMillis();
+            node.setLastHeartbeatTime(currentTime);
+
+            System.out.println("leader send heartbeat...");
             for (String peer : peers) {
                 AppendEntriesResult result = (AppendEntriesResult) node.getRpcClient().send(peer, arguments);
-                System.out.println(peer + " " + result);
+                System.out.println("receive: " + peer);
                 int term = result.getTerm();
                 if (term > node.getCurrentTerm()) {
                     node.becomeFollower(term, peer);

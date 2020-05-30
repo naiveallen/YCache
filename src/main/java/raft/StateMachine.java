@@ -2,7 +2,7 @@ package raft;
 
 import exception.IllegalCommandException;
 import exception.NullCommandException;
-import pojo.LogEntry;
+import log.LogEntry;
 
 import java.util.HashMap;
 import java.util.Map;

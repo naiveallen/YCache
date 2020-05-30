@@ -1,6 +1,6 @@
 package rpc;
 
-import pojo.LogEntry;
+import log.LogEntry;
 
 import java.io.Serializable;
 
