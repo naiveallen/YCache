@@ -26,10 +26,9 @@ public class RPCClient {
     public Object send(String addr, Object o) {
         Object res = null;
         try {
-            res = rpcClient.invokeSync(addr, o, 200000);
+            res = rpcClient.invokeSync(addr, o, 20000);
         } catch (RemotingException | InterruptedException e) {
-            e.printStackTrace();
-            System.out.println("RPC RemotingException...");
+            System.out.println("Create connection failed. The address is " + addr);
         }
         return res;
     }

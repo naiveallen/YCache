@@ -1,5 +1,6 @@
 package raft;
 
+import com.alipay.remoting.exception.RemotingException;
 import enums.NodeState;
 import node.Node;
 import rpc.AppendEntriesArguments;
@@ -27,9 +28,14 @@ public class HeartBeatTask implements Runnable{
             node.setLastHeartbeatTime(currentTime);
 
             System.out.println("leader send heartbeat...");
+            // TODO 改为异步
             for (String peer : peers) {
+
+
+
                 AppendEntriesResult result = (AppendEntriesResult) node.getRpcClient().send(peer, arguments);
-                System.out.println("receive: " + peer);
+//                System.out.println("receive: " + peer);
+//                System.out.println("received " + peer + ": " + result);
                 int term = result.getTerm();
                 if (term > node.getCurrentTerm()) {
                     node.becomeFollower(term, peer);

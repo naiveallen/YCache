@@ -2,15 +2,14 @@ package node;
 
 import enums.NodeState;
 import log.Log;
+import org.omg.CORBA.TIMEOUT;
 import raft.*;
 import rpc.*;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -69,6 +68,7 @@ public class Node {
     private Consensus consensus;
 
     private ScheduledExecutorService scheduledExecutorService;
+    private ExecutorService threadPool;
     private HeartBeatTask heartBeatTask;
     private RequestVoteTask requestVoteTask;
 
@@ -101,11 +101,11 @@ public class Node {
 //
 
     // every second it send one heartbeat
-    private int heartbeatTick = 1000;
+    private int heartbeatTick = 3000;
     private long lastHeartbeatTime = 0;
     private long lastElectionTime = 0;
-    private int baseElectionTimeout = 3000;
-    private int randomElectionTimeout = baseElectionTimeout + new Random().nextInt(baseElectionTimeout);
+    private int baseElectionTimeout = 6000;
+
 
     // current votes
     private AtomicInteger votes = new AtomicInteger(0);
@@ -131,8 +131,10 @@ public class Node {
         this.rpcClient = new RPCClient();
 
         scheduledExecutorService = new ScheduledThreadPoolExecutor(Runtime.getRuntime().availableProcessors());
+        threadPool = Executors.newCachedThreadPool();
 
         this.heartBeatTask = new HeartBeatTask();
+        this.requestVoteTask = new RequestVoteTask();
 
         // Set logs
         this.log = Log.getInstance();
@@ -154,21 +156,25 @@ public class Node {
         rpcServer.start();
         rpcClient.start();
 
+
 //        try {
-//            String res = (String) rpcClient.getRpcClient().invokeSync("localhost:8881", "hello", 2000);
-//            System.out.println("reply: " + res);
-//        } catch (RemotingException | InterruptedException e) {
+//            System.out.println("Cluster initial...");
+//            Thread.sleep(6000);
+//        } catch (InterruptedException e) {
 //            e.printStackTrace();
 //        }
 
 
+        System.out.println(cluster.getMyself() + " start...");
+
         // start heartbreak
         // Once this node become leader, it will send heartbeat to other peers immediately
         scheduledExecutorService.scheduleWithFixedDelay(heartBeatTask, 0, heartbeatTick, TimeUnit.MILLISECONDS);
+        scheduledExecutorService.scheduleAtFixedRate(requestVoteTask, 6000, 500, TimeUnit.MILLISECONDS);
 
 
 
-        System.out.println(cluster.getMyself() + " start...");
+
 
     }
 
@@ -212,7 +218,7 @@ public class Node {
         setState(NodeState.LEADER.code);
         getCluster().setLeader(getCluster().getMyself());
         setVotedFor("");
-        System.out.println(getCluster().getMyself() + "becomes a leader.");
+        System.out.println(getCluster().getMyself() + " becomes a leader.");
     }
 
 
@@ -314,10 +320,13 @@ public class Node {
         return baseElectionTimeout;
     }
 
-    public int getRandomElectionTimeout() {
-        return randomElectionTimeout;
+    public ScheduledExecutorService getScheduledExecutorService() {
+        return scheduledExecutorService;
     }
 
+    public ExecutorService getThreadPool() {
+        return threadPool;
+    }
 
     public int voteIncr() {
         return votes.incrementAndGet();
