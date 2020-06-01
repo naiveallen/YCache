@@ -28,7 +28,7 @@ public class Consensus {
      * least as up-to-date as receiver’s log, grant vote (§5.2, §5.4)
      *
      */
-    public RequestVoteResult requestVote(RequestVoteArguments arguments) {
+    public synchronized RequestVoteResult requestVote(RequestVoteArguments arguments) {
         RequestVoteResult result = new RequestVoteResult();
 
         int myTerm = node.getCurrentTerm();
@@ -41,7 +41,9 @@ public class Consensus {
             return result;
         }
 
-        if (node.getVotedFor() == null || node.getVotedFor().equals(arguments.getCandidateId())) {
+        if (node.getVotedFor() == null
+                || node.getVotedFor().equals("")
+                || node.getVotedFor().equals(arguments.getCandidateId())) {
             if (node.getLog().getLastLog() != null) {
                 if (myLastLogTerm > arguments.getLastLogTerm()) {
                     result.setVoteGranted(false);
@@ -52,6 +54,7 @@ public class Consensus {
                     return result;
                 }
             }
+            node.setVotedFor(arguments.getCandidateId());
             result.setVoteGranted(true);
         } else {
             result.setVoteGranted(false);
@@ -77,9 +80,8 @@ public class Consensus {
      * min(leaderCommit, index of last new entry)
      *
      */
-    public AppendEntriesResult appendEntries(AppendEntriesArguments arguments) {
+    public synchronized AppendEntriesResult appendEntries(AppendEntriesArguments arguments) {
         AppendEntriesResult result = new AppendEntriesResult();
-
 
         int myTerm = node.getCurrentTerm();
         int myLastLogTerm = node.getLog().getLastTerm();
@@ -93,6 +95,8 @@ public class Consensus {
         }
 
         node.setLastHeartbeatTime(System.currentTimeMillis());
+        node.setVotedFor("");
+        node.setVotes(0);
         node.getCluster().setLeader(arguments.getLeaderId());
         node.setCurrentTerm(arguments.getTerm());
         node.setState(NodeState.FOLLOWER.code);

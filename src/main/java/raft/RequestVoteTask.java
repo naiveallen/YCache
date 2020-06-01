@@ -34,12 +34,14 @@ public class RequestVoteTask implements Runnable{
                 return;
             }
 
+            // TODO 随机时间有问题 应该尽可能拉大间隔   可以 150 -> 200
             // TODO When election again, it needs a random timeout
             // First start, it can decide who is candidate by delay of the threadPool
             // If leader is fail, it will decide candidate by heartbeat timeout
             long currentTime = System.currentTimeMillis();
-            int baseElectionTimeout = node.getBaseElectionTimeout();
-            int randomElectionTimeout = baseElectionTimeout + new Random().nextInt(baseElectionTimeout);
+            int baseElectionTimeout = node.getElectionTimeout();
+            int randomElectionTimeout = baseElectionTimeout + new Random().nextInt(150);
+            node.setElectionTimeout(randomElectionTimeout);
             if (currentTime - node.getLastHeartbeatTime() < randomElectionTimeout) {
                 return;
             }

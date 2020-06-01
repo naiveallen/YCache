@@ -7,6 +7,7 @@ import rpc.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -46,16 +47,16 @@ public class Node {
 
 
     /** 已知的最大的已经被提交的日志条目的索引值 */
-    private volatile int commitIndex;
+    private volatile int commitIndex = 0;
 
     /** 最后被应用到状态机的日志条目索引值（初始化为 0，持续递增) */
     private volatile int lastApplied = 0;
 
     /** 对于每一个服务器，需要发送给他的下一个日志条目的索引值（初始化为领导人最后索引值加一） */
-//    Map<Peer, Integer> nextIndex;
+    Map<String, Integer> nextIndex;
 
     /** 对于每一个服务器，已经复制给他的日志的最高索引值 */
-//    Map<Peer, Integer> matchIndex;
+    Map<String, Integer> matchIndex;
 
 
     // current votes
@@ -106,7 +107,7 @@ public class Node {
     private int heartbeatTick = 3000;
     private long lastHeartbeatTime = 0;
     private long lastElectionTime = 0;
-    private int baseElectionTimeout = 6000;
+    private int electionTimeout = 5000;
 
 
 
@@ -167,7 +168,7 @@ public class Node {
         // start heartbreak
         // Once this node become leader, it will send heartbeat to other peers immediately
         scheduledExecutorService.scheduleWithFixedDelay(heartBeatTask, 0, heartbeatTick, TimeUnit.MILLISECONDS);
-        scheduledExecutorService.scheduleAtFixedRate(requestVoteTask, 6000, 500, TimeUnit.MILLISECONDS);
+        scheduledExecutorService.scheduleAtFixedRate(requestVoteTask, 10000, 200, TimeUnit.MILLISECONDS);
 
 
 
@@ -193,6 +194,7 @@ public class Node {
     }
 
     public void becomeCandidate() {
+        setVotes(0);
         votedFor = "";
         state = NodeState.CANDIDATE.code;
     }
@@ -286,8 +288,12 @@ public class Node {
         return lastElectionTime;
     }
 
-    public int getBaseElectionTimeout() {
-        return baseElectionTimeout;
+    public int getElectionTimeout() {
+        return electionTimeout;
+    }
+
+    public void setElectionTimeout(int electionTimeout) {
+        this.electionTimeout = electionTimeout;
     }
 
     public ScheduledExecutorService getScheduledExecutorService() {
@@ -313,4 +319,6 @@ public class Node {
     public Log getLog() {
         return log;
     }
+
+
 }
