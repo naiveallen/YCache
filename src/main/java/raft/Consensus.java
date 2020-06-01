@@ -57,7 +57,6 @@ public class Consensus {
             result.setVoteGranted(false);
         }
 
-
         return result;
 
     }
@@ -107,6 +106,8 @@ public class Consensus {
         }
 
         // handle log append
+
+
 
 
 

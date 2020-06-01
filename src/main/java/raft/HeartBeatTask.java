@@ -28,23 +28,26 @@ public class HeartBeatTask implements Runnable{
             node.setLastHeartbeatTime(currentTime);
 
             System.out.println("leader send heartbeat...");
-            // TODO 改为异步
+            // TODO change to asynchronous send
             for (String peer : peers) {
+                node.getThreadPool().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            AppendEntriesResult result = (AppendEntriesResult) node.getRpcClient().send(peer, arguments);
+                            int term = result.getTerm();
+                            if (term > node.getCurrentTerm()) {
+                                node.becomeFollower(term, peer);
+                            }
+                        } catch (Exception e) {
 
-
-
-                AppendEntriesResult result = (AppendEntriesResult) node.getRpcClient().send(peer, arguments);
-//                System.out.println("receive: " + peer);
-//                System.out.println("received " + peer + ": " + result);
-                int term = result.getTerm();
-                if (term > node.getCurrentTerm()) {
-                    node.becomeFollower(term, peer);
-                }
+                        }
+                    }
+                });
             }
         } catch (Exception e) {
             System.out.println("Heartbeat RPC has problem...");
         }
-
 
     }
 

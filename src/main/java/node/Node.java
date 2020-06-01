@@ -2,13 +2,11 @@ package node;
 
 import enums.NodeState;
 import log.Log;
-import org.omg.CORBA.TIMEOUT;
 import raft.*;
 import rpc.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -31,7 +29,7 @@ public class Node {
 
     private boolean initialized = false;
 
-    private int state = NodeState.FOLLOWER.getCode();
+    private volatile int state = NodeState.FOLLOWER.getCode();
 
     private Cluster cluster;
 
@@ -58,6 +56,10 @@ public class Node {
 
     /** 对于每一个服务器，已经复制给他的日志的最高索引值 */
 //    Map<Peer, Integer> matchIndex;
+
+
+    // current votes
+    private AtomicInteger votes = new AtomicInteger(0);
 
     private RPCServer rpcServer;
 
@@ -105,11 +107,6 @@ public class Node {
     private long lastHeartbeatTime = 0;
     private long lastElectionTime = 0;
     private int baseElectionTimeout = 6000;
-
-
-    // current votes
-    private AtomicInteger votes = new AtomicInteger(0);
-
 
 
 
@@ -174,21 +171,7 @@ public class Node {
 
 
 
-
-
     }
-
-
-
-
-
-
-
-
-
-
-
-
 
     // handle RequestVote RPC
     public RequestVoteResult handleRequestVote(RequestVoteArguments arguments) {
@@ -220,19 +203,6 @@ public class Node {
         setVotedFor("");
         System.out.println(getCluster().getMyself() + " becomes a leader.");
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -334,6 +304,10 @@ public class Node {
 
     public int getVotes() {
         return votes.get();
+    }
+
+    public void setVotes(int count) {
+        votes.set(count);
     }
 
     public Log getLog() {
