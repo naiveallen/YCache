@@ -14,7 +14,7 @@ public class RPCServer {
         rpcServer = new RpcServer(port,false, false);
         rpcServer.registerUserProcessor(new RequestVoteUserProcessor());
         rpcServer.registerUserProcessor(new AppendEntriesUserProcessor());
-
+        rpcServer.registerUserProcessor(new ClientUserProcessor());
     }
 
     public RpcServer getRpcServer() {

@@ -18,9 +18,8 @@ public class AppendEntriesArguments implements Serializable {
     // term of prevLogIndex entry
     private int prevLogTerm;
 
-    // log entries to store (empty for heartbeat;
-    // may send more than one for efficiency)
-    private LogEntry[] entries;
+    // log entries to store (empty for heartbeat)
+    private LogEntry logEntry;
 
     // leader’s commitIndex
     private int leaderCommit;
@@ -35,12 +34,12 @@ public class AppendEntriesArguments implements Serializable {
     }
 
     // Append Entries
-    public AppendEntriesArguments(int term, String leaderId, int prevLogIndex, int prevLogTerm, LogEntry[] entries, int leaderCommit) {
+    public AppendEntriesArguments(int term, String leaderId, int prevLogIndex, int prevLogTerm, LogEntry logEntry, int leaderCommit) {
         this.term = term;
         this.leaderId = leaderId;
         this.prevLogIndex = prevLogIndex;
         this.prevLogTerm = prevLogTerm;
-        this.entries = entries;
+        this.logEntry = logEntry;
         this.leaderCommit = leaderCommit;
     }
 
@@ -76,12 +75,12 @@ public class AppendEntriesArguments implements Serializable {
         this.prevLogTerm = prevLogTerm;
     }
 
-    public LogEntry[] getEntries() {
-        return entries;
+    public LogEntry getLogEntry() {
+        return logEntry;
     }
 
-    public void setEntries(LogEntry[] entries) {
-        this.entries = entries;
+    public void setLogEntry(LogEntry logEntry) {
+        this.logEntry = logEntry;
     }
 
     public int getLeaderCommit() {

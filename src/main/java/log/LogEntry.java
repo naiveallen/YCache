@@ -12,6 +12,11 @@ public class LogEntry {
     public LogEntry() {
     }
 
+    public LogEntry(int term, String command) {
+        this.term = term;
+        this.command = command;
+    }
+
     public LogEntry(int index, int term, String command) {
         this.index = index;
         this.term = term;

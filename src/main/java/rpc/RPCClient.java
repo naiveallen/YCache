@@ -3,9 +3,6 @@ package rpc;
 import com.alipay.remoting.exception.RemotingException;
 import com.alipay.remoting.rpc.RpcClient;
 
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-
 public class RPCClient {
 
     private RpcClient rpcClient;

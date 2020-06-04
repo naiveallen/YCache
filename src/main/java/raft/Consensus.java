@@ -102,7 +102,7 @@ public class Consensus {
         node.setState(NodeState.FOLLOWER.code);
 
         // handle heartbeat
-        if (arguments.getEntries() == null || arguments.getEntries().length == 0) {
+        if (arguments.getLogEntry() == null) {
             System.out.println(node.getCluster().getMyself()
                     + " receives heartbeat from " + arguments.getLeaderId());
             result.setSuccess(true);
@@ -110,6 +110,14 @@ public class Consensus {
         }
 
         // handle log append
+
+
+
+
+
+
+
+
 
 
 

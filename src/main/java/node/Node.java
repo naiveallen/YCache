@@ -1,7 +1,10 @@
 package node;
 
+import com.sun.org.apache.xpath.internal.operations.Bool;
+import enums.Command;
 import enums.NodeState;
 import log.Log;
+import log.LogEntry;
 import raft.*;
 import rpc.*;
 
@@ -14,10 +17,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Node's initial state is Follower.
  *
- *
- *
- *
  */
+
 public class Node {
 
     private static Node instance = new Node();
@@ -30,7 +31,7 @@ public class Node {
 
     private boolean initialized = false;
 
-    private volatile int state = NodeState.FOLLOWER.getCode();
+    private volatile int state = NodeState.LEADER.getCode();
 
     private Cluster cluster;
 
@@ -154,15 +155,6 @@ public class Node {
         rpcServer.start();
         rpcClient.start();
 
-
-//        try {
-//            System.out.println("Cluster initial...");
-//            Thread.sleep(6000);
-//        } catch (InterruptedException e) {
-//            e.printStackTrace();
-//        }
-
-
         System.out.println(cluster.getMyself() + " start...");
 
         // start heartbreak
@@ -170,9 +162,8 @@ public class Node {
         scheduledExecutorService.scheduleWithFixedDelay(heartBeatTask, 0, heartbeatTick, TimeUnit.MILLISECONDS);
         scheduledExecutorService.scheduleAtFixedRate(requestVoteTask, 10000, 200, TimeUnit.MILLISECONDS);
 
-
-
     }
+
 
     // handle RequestVote RPC
     public RequestVoteResult handleRequestVote(RequestVoteArguments arguments) {
@@ -183,6 +174,112 @@ public class Node {
     // handle AppendEntries RPC
     public AppendEntriesResult handleAppendEntries(AppendEntriesArguments arguments) {
         return consensus.appendEntries(arguments);
+    }
+
+
+    /**
+     * 客户端的每一个请求都包含一条被复制状态机执行的指令。
+     * 领导人把这条指令作为一条新的日志条目附加到日志中去，然后并行的发起附加条目 RPCs 给其他的服务器，让他们复制这条日志条目。
+     * 当这条日志条目被安全的复制（下面会介绍），领导人会应用这条日志条目到它的状态机中然后把执行的结果返回给客户端。
+     * 如果跟随者崩溃或者运行缓慢，再或者网络丢包，
+     *  领导人会不断的重复尝试附加日志条目 RPCs （尽管已经回复了客户端）直到所有的跟随者都最终存储了所有的日志条目。
+     * @param request
+     * @return
+     */
+
+    // handle Client Request
+    public ClientResponse handleClientRequest(ClientRequest request) {
+
+        System.out.print("Client request: "
+                + Command.getCommandByCode(request.getCommand())
+                + " " + request.getKey() + " ");
+        if (request.getValue() != null) {
+            System.out.println(request.getValue());
+        } else {
+            System.out.println();
+        }
+
+        // handle GET request
+        if (request.getCommand() == Command.GET.code) {
+            String value = stateMachine.get(request.getKey());
+            ClientResponse response = ClientResponse.successWithResult(value);
+            return response;
+        }
+
+        // handle PUT request
+        // If I'm not leader, then redirect this request to leader
+        if (state != NodeState.LEADER.code) {
+            return redirectToLeader(request);
+        }
+
+        if (request.getCommand() == Command.PUT.code) {
+            String key = request.getKey();
+            String value = request.getValue();
+            LogEntry logEntry = new LogEntry(currentTerm, key + " " + value);
+            log.appendLog(logEntry);
+
+            // asynchronous send logEntry to peers
+
+            AppendEntriesArguments arguments = new AppendEntriesArguments();
+
+
+
+            AtomicInteger success = new AtomicInteger(0);
+            List<Future> results = new ArrayList<>();
+
+            List<String> peers = getCluster().getOthers();
+
+            for (String peer : peers) {
+                // Asynchronous send request vote
+                Future future = getThreadPool().submit(new Callable() {
+                    @Override
+                    public Boolean call() throws Exception {
+                        try{
+
+
+
+                            RequestVoteResult requestVoteResult = (RequestVoteResult)
+                                    getRpcClient().send(peer, arguments);
+
+                            return false;
+
+
+
+
+
+
+
+                        } catch (Exception e) {
+                            System.out.println("RequestVote RPC has problem...");
+                            return false;
+                        }
+                    }
+                });
+                results.add(future);
+            }
+
+
+
+
+
+
+        }
+
+
+
+
+
+
+
+        return ClientResponse.success();
+    }
+
+
+
+    public ClientResponse redirectToLeader(ClientRequest request) {
+        String leader = cluster.getLeader();
+        ClientResponse response = (ClientResponse) rpcClient.send(leader, request);
+        return response;
     }
 
 
@@ -205,7 +302,6 @@ public class Node {
         setVotedFor("");
         System.out.println(getCluster().getMyself() + " becomes a leader.");
     }
-
 
 
     public boolean isInitialized() {
