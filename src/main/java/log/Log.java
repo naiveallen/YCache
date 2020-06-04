@@ -23,6 +23,9 @@ public class Log {
     }
 
     public LogEntry getLog(int index) {
+        if (index < 0 || index >= logs.size()) {
+            return null;
+        }
         return logs.get(index);
     }
 
@@ -43,6 +46,21 @@ public class Log {
             return 0;
         }
         return logEntry.getTerm();
+    }
+
+    public void deleteLastLog() {
+        if (logs.size() == 0) {
+            return;
+        }
+        logs.remove(getLastIndex());
+    }
+
+    public void deleteLogsStartWithIndex(int index) {
+        int lastIndex = getLastIndex();
+        while (index <= lastIndex) {
+            logs.remove(lastIndex);
+            lastIndex--;
+        }
     }
 
 

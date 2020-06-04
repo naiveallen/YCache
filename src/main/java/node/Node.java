@@ -3,6 +3,8 @@ package node;
 import com.sun.org.apache.xpath.internal.operations.Bool;
 import enums.Command;
 import enums.NodeState;
+import exception.IllegalCommandException;
+import exception.NullCommandException;
 import log.Log;
 import log.LogEntry;
 import raft.*;
@@ -10,7 +12,6 @@ import rpc.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -31,7 +32,7 @@ public class Node {
 
     private boolean initialized = false;
 
-    private volatile int state = NodeState.LEADER.getCode();
+    private volatile int state = NodeState.FOLLOWER.getCode();
 
     private Cluster cluster;
 
@@ -48,16 +49,16 @@ public class Node {
 
 
     /** 已知的最大的已经被提交的日志条目的索引值 */
-    private volatile int commitIndex = 0;
+    private volatile int commitIndex = -1;
 
-    /** 最后被应用到状态机的日志条目索引值（初始化为 0，持续递增) */
-    private volatile int lastApplied = 0;
+    /** 最后被应用到状态机的日志条目索引值 */
+    private volatile int lastApplied = -1;
 
-    /** 对于每一个服务器，需要发送给他的下一个日志条目的索引值（初始化为领导人最后索引值加一） */
-    Map<String, Integer> nextIndex;
-
-    /** 对于每一个服务器，已经复制给他的日志的最高索引值 */
-    Map<String, Integer> matchIndex;
+//    /** 对于每一个服务器，需要发送给他的下一个日志条目的索引值（初始化为领导人最后索引值加一） */
+//    private volatile int nextIndex = 0;
+//
+//    /** 对于每一个服务器，已经复制给他的日志的最高索引值 */
+//    private volatile int matchIndex = -1;
 
 
     // current votes
@@ -217,11 +218,20 @@ public class Node {
             String value = request.getValue();
             LogEntry logEntry = new LogEntry(currentTerm, key + " " + value);
             log.appendLog(logEntry);
+            commitIndex = logEntry.getIndex();
 
             // asynchronous send logEntry to peers
 
             AppendEntriesArguments arguments = new AppendEntriesArguments();
-
+            arguments.setTerm(currentTerm);
+            arguments.setLeaderId(cluster.getLeader());
+            arguments.setLeaderCommit(commitIndex);
+            arguments.setLogEntry(logEntry);
+            arguments.setPrevLogIndex(
+                    log.getLog(logEntry.getIndex() - 1) == null ? -1 :
+                            log.getLog(logEntry.getIndex() - 1).getIndex());
+            arguments.setPrevLogTerm(log.getLog(logEntry.getIndex() - 1) == null ? -1 :
+                    log.getLog(logEntry.getIndex() - 1).getTerm());
 
 
             AtomicInteger success = new AtomicInteger(0);
@@ -230,27 +240,32 @@ public class Node {
             List<String> peers = getCluster().getOthers();
 
             for (String peer : peers) {
-                // Asynchronous send request vote
+                // Asynchronous send append entry request
                 Future future = getThreadPool().submit(new Callable() {
                     @Override
                     public Boolean call() throws Exception {
                         try{
-
-
-
-                            RequestVoteResult requestVoteResult = (RequestVoteResult)
+                            AppendEntriesResult result = (AppendEntriesResult)
                                     getRpcClient().send(peer, arguments);
+                            if (result == null) {
+                                return false;
+                            }
+
+                            // Append entry to follower success
+                            if (result.isSuccess()) {
+                                return true;
+                            } else {
+                                if (result.getTerm() > currentTerm) {
+                                    currentTerm = result.getTerm();
+                                    state = NodeState.FOLLOWER.code;
+                                    return false;
+                                }
+                            }
 
                             return false;
 
-
-
-
-
-
-
                         } catch (Exception e) {
-                            System.out.println("RequestVote RPC has problem...");
+                            System.out.println("AppendEntry RPC has problem...");
                             return false;
                         }
                     }
@@ -258,25 +273,63 @@ public class Node {
                 results.add(future);
             }
 
+            CountDownLatch latch = new CountDownLatch(results.size());
 
+            for (Future future : results) {
+                getThreadPool().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        Boolean res = null;
+                        try {
+                            // give leader 3s to get the append result from other peer
+                            res = (Boolean) future.get(3000, TimeUnit.MILLISECONDS);
+                            if (res == null) {
+                                return;
+                            }
+                            if (res) {
+                                success.incrementAndGet();
+                            }
+                        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                            System.out.println("future get exception");
+                        } finally {
+                            latch.countDown();
+                        }
+                    }
+                });
+            }
 
+            try {
+                latch.await(3000, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
 
+            if (success.get() >= peers.size() / 2) {
+                try {
+                    stateMachine.apply(logEntry);
+                } catch (NullCommandException | IllegalCommandException e) {
+                    e.printStackTrace();
+                }
+                lastApplied = commitIndex;
 
+                return ClientResponse.success();
 
+            } else {
+                log.deleteLastLog();
+                commitIndex = log.getLastIndex();
+                System.out.println("Fail apply this logEntry.");
+
+                return ClientResponse.fail();
+            }
         }
 
-
-
-
-
-
-
-        return ClientResponse.success();
+        return ClientResponse.fail();
     }
 
 
 
     public ClientResponse redirectToLeader(ClientRequest request) {
+        System.out.println("Redirect client request to leader");
         String leader = cluster.getLeader();
         ClientResponse response = (ClientResponse) rpcClient.send(leader, request);
         return response;

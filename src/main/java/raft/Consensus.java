@@ -1,6 +1,9 @@
 package raft;
 
 import enums.NodeState;
+import exception.IllegalCommandException;
+import exception.NullCommandException;
+import log.LogEntry;
 import node.Node;
 import rpc.AppendEntriesArguments;
 import rpc.AppendEntriesResult;
@@ -67,7 +70,7 @@ public class Consensus {
 
     /**
      * @param arguments
-     * @return
+     * @return AppendEntriesResult
      *
      * 1. Reply false if term < currentTerm (§5.1)
      * 2. Reply false if log doesn’t contain an entry at prevLogIndex
@@ -110,30 +113,49 @@ public class Consensus {
         }
 
         // handle log append
+        LogEntry newLogEntry = arguments.getLogEntry();
+        LogEntry prevLogEntry = node.getLog().getLog(arguments.getPrevLogIndex());
 
+        // Reply false if log doesn’t contain an entry at prevLogIndex
+        // whose term matches prevLogTerm
+        if (prevLogEntry != null && prevLogEntry.getTerm() != arguments.getPrevLogTerm()) {
+            System.out.println("PrevLogTerm is not match.");
+            result.setSuccess(false);
+            return result;
+        }
 
+        // If an existing entry conflicts with a new one (same index
+        // but different terms), delete the existing entry and all that follow it
+        LogEntry existLogEntry = node.getLog().getLog(newLogEntry.getIndex());
+        if (existLogEntry != null) {
+            if (existLogEntry.getTerm() != newLogEntry.getTerm()) {
+                node.getLog().deleteLogsStartWithIndex(existLogEntry.getIndex());
+            } else {
+                // Has existed this new log, cannot append twice
+                result.setSuccess(true);
+                return result;
+            }
+        }
 
+        // Append new entry not already in the log
+        node.getLog().appendLog(newLogEntry);
+        try {
+            node.getStateMachine().apply(newLogEntry);
+        } catch (NullCommandException | IllegalCommandException e) {
+            e.printStackTrace();
+        }
+        result.setSuccess(true);
 
+        // If leaderCommit > commitIndex, set commitIndex =
+        // min(leaderCommit, index of last new entry)
+        if (arguments.getLeaderCommit() > node.getCommitIndex()) {
+            int commitIndex = Math.min(arguments.getLeaderCommit(), newLogEntry.getIndex());
+            node.setCommitIndex(commitIndex);
+            node.setLastApplied(commitIndex);
+        }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-        return new AppendEntriesResult(myTerm, true);
+        return result;
     }
-
-
-
-
 
 
 }

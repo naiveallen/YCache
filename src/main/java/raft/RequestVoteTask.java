@@ -40,7 +40,7 @@ public class RequestVoteTask implements Runnable{
             // If leader is fail, it will decide candidate by heartbeat timeout
             long currentTime = System.currentTimeMillis();
             int baseElectionTimeout = node.getElectionTimeout();
-            int randomElectionTimeout = baseElectionTimeout + new Random().nextInt(150);
+            int randomElectionTimeout = baseElectionTimeout + new Random().nextInt(50);
             node.setElectionTimeout(randomElectionTimeout);
             if (currentTime - node.getLastHeartbeatTime() < randomElectionTimeout) {
                 return;

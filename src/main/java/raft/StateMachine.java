@@ -34,6 +34,8 @@ public class StateMachine {
         String value = kv[1];
         cache.put(key, value);
 
+        System.out.println("Success apply this logEntry.");
+
     }
 
     public String get(String key) {
