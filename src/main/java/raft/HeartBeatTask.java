@@ -1,6 +1,5 @@
 package raft;
 
-import com.alipay.remoting.exception.RemotingException;
 import enums.NodeState;
 import node.Node;
 import rpc.AppendEntriesArguments;

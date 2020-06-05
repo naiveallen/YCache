@@ -11,17 +11,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.*;
 
-/**
- * 1. 在转变成候选人后就立即开始选举过程
- *      自增当前的任期号（currentTerm）
- *      给自己投票
- *      重置选举超时计时器
- *      发送请求投票的 RPC 给其他所有服务器
- * 2. 如果接收到大多数服务器的选票，那么就变成领导人
- * 3. 如果接收到来自新的领导人的附加日志 RPC，转变成跟随者
- * 4. 如果选举过程超时，再次发起一轮选举
- */
-
 public class RequestVoteTask implements Runnable{
 
     private Node node = Node.getInstance();
@@ -34,7 +23,6 @@ public class RequestVoteTask implements Runnable{
                 return;
             }
 
-            // TODO 随机时间有问题 应该尽可能拉大间隔   可以 150 -> 200
             // TODO When election again, it needs a random timeout
             // First start, it can decide who is candidate by delay of the threadPool
             // If leader is fail, it will decide candidate by heartbeat timeout

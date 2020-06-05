@@ -1,7 +1,6 @@
 import com.alipay.remoting.rpc.RpcClient;
 import rpc.ClientRequest;
 import rpc.ClientResponse;
-import rpc.RPCClient;
 
 import java.util.Scanner;
 

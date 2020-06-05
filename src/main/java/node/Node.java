@@ -1,6 +1,5 @@
 package node;
 
-import com.sun.org.apache.xpath.internal.operations.Bool;
 import enums.Command;
 import enums.NodeState;
 import exception.IllegalCommandException;
@@ -47,18 +46,11 @@ public class Node {
     //was received by leader (first index is 1)
     private Log log;
 
-
-    /** 已知的最大的已经被提交的日志条目的索引值 */
+    // index of highest log entry known to be committed
     private volatile int commitIndex = -1;
 
-    /** 最后被应用到状态机的日志条目索引值 */
+    // index of highest log entry applied to state machine
     private volatile int lastApplied = -1;
-
-//    /** 对于每一个服务器，需要发送给他的下一个日志条目的索引值（初始化为领导人最后索引值加一） */
-//    private volatile int nextIndex = 0;
-//
-//    /** 对于每一个服务器，已经复制给他的日志的最高索引值 */
-//    private volatile int matchIndex = -1;
 
 
     // current votes
@@ -77,40 +69,12 @@ public class Node {
     private HeartBeatTask heartBeatTask;
     private RequestVoteTask requestVoteTask;
 
-//    private ReplicationFailQueueConsumer replicationFailQueueConsumer = new ReplicationFailQueueConsumer();
-//
-//    private LinkedBlockingQueue<ReplicationFailModel> replicationFailQueue = new LinkedBlockingQueue<>(2048);
-
-
-
-//    /** 选举时间间隔基数 */
-//    public volatile long electionTime = 15 * 1000;
-//    /** 上一次选举时间 */
-//    public volatile long preElectionTime = 0;
-//
-//    /** 上次一心跳时间戳 */
-//    public volatile long preHeartBeatTime = 0;
-//    /** 心跳间隔基数 */
-//    public final long heartBeatTick = 5 * 1000;
-
-//    /**
-//     * 上一次选举超时过去的时间
-//     */
-//    private int electionElapsed;
-//
-//    /**
-//     * 收到上一次心跳过去的时间
-//     */
-//    private int heartbeatElapsed;
-//
-//
 
     // every second it send one heartbeat
     private int heartbeatTick = 3000;
     private long lastHeartbeatTime = 0;
     private long lastElectionTime = 0;
     private int electionTimeout = 5000;
-
 
 
     public void init(int port, String[] hosts) {
@@ -177,16 +141,6 @@ public class Node {
         return consensus.appendEntries(arguments);
     }
 
-
-    /**
-     * 客户端的每一个请求都包含一条被复制状态机执行的指令。
-     * 领导人把这条指令作为一条新的日志条目附加到日志中去，然后并行的发起附加条目 RPCs 给其他的服务器，让他们复制这条日志条目。
-     * 当这条日志条目被安全的复制（下面会介绍），领导人会应用这条日志条目到它的状态机中然后把执行的结果返回给客户端。
-     * 如果跟随者崩溃或者运行缓慢，再或者网络丢包，
-     *  领导人会不断的重复尝试附加日志条目 RPCs （尽管已经回复了客户端）直到所有的跟随者都最终存储了所有的日志条目。
-     * @param request
-     * @return
-     */
 
     // handle Client Request
     public ClientResponse handleClientRequest(ClientRequest request) {
@@ -325,7 +279,6 @@ public class Node {
 
         return ClientResponse.fail();
     }
-
 
 
     public ClientResponse redirectToLeader(ClientRequest request) {
@@ -467,6 +420,5 @@ public class Node {
     public Log getLog() {
         return log;
     }
-
 
 }
