@@ -200,6 +200,11 @@ public class Node {
             System.out.println();
         }
 
+        // If I'm not leader, then redirect this request to leader
+        if (state != NodeState.LEADER.code) {
+            return redirectToLeader(request);
+        }
+
         // handle GET request
         if (request.getCommand() == Command.GET.code) {
             String value = stateMachine.get(request.getKey());
@@ -208,11 +213,6 @@ public class Node {
         }
 
         // handle PUT request
-        // If I'm not leader, then redirect this request to leader
-        if (state != NodeState.LEADER.code) {
-            return redirectToLeader(request);
-        }
-
         if (request.getCommand() == Command.PUT.code) {
             String key = request.getKey();
             String value = request.getValue();
@@ -329,7 +329,6 @@ public class Node {
 
 
     public ClientResponse redirectToLeader(ClientRequest request) {
-        System.out.println("Redirect client request to leader");
         String leader = cluster.getLeader();
         ClientResponse response = (ClientResponse) rpcClient.send(leader, request);
         return response;
